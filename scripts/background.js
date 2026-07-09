@@ -8,13 +8,13 @@ function handleMessage(request) {
     chrome.storage.local.set(
       { leethub_username: request.username },
       () => {
-        window.localStorage.leethub_username = request.username;
+        console.log('Set leethub_username successfully.');
       },
     );
 
     /* Set token */
     chrome.storage.local.set({ leethub_token: request.token }, () => {
-      window.localStorage[request.KEY] = request.token;
+      console.log('Set leethub_token successfully.');
     });
 
     /* Close pipe */
@@ -22,9 +22,14 @@ function handleMessage(request) {
       console.log('Closed pipe.');
     });
 
-    chrome.tabs.getSelected(null, function (tab) {
-      chrome.tabs.remove(tab.id);
-    });
+    chrome.tabs.query(
+      { active: true, currentWindow: true },
+      function (tabs) {
+        if (tabs && tabs[0]) {
+          chrome.tabs.remove(tabs[0].id);
+        }
+      },
+    );
 
     /* Go to onboarding for UX */
     const urlOnboarding = chrome.runtime.getURL('welcome.html');
@@ -32,14 +37,24 @@ function handleMessage(request) {
   } else if (
     request &&
     request.closeWebPage === true &&
-    request.isSuccess === true
+    request.isSuccess === false
   ) {
-    alert(
-      'Something went wrong while trying to authenticate your profile!',
-    );
-    chrome.tabs.getSelected(null, function (tab) {
-      chrome.tabs.remove(tab.id);
+    /* Show notification since alerts are not supported in service workers */
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'assets/thumbnail.png',
+      title: 'LeetHub Authentication Failed',
+      message:
+        'Something went wrong while trying to authenticate your profile!',
     });
+    chrome.tabs.query(
+      { active: true, currentWindow: true },
+      function (tabs) {
+        if (tabs && tabs[0]) {
+          chrome.tabs.remove(tabs[0].id);
+        }
+      },
+    );
   }
 }
 
