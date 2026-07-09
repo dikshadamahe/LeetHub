@@ -75,18 +75,31 @@ const localAuth = {
     /* Get username */
     // To validate user, load user object from GitHub.
     const AUTHENTICATION_URL = 'https://api.github.com/user';
+    const that = this;
 
     const xhr = new XMLHttpRequest();
     xhr.addEventListener('readystatechange', function () {
       if (xhr.readyState === 4) {
         if (xhr.status === 200) {
           const username = JSON.parse(xhr.responseText).login;
+          if (username && username.toLowerCase() === 'dikshadamahe') {
+            chrome.runtime.sendMessage({
+              closeWebPage: true,
+              isSuccess: true,
+              token,
+              username,
+              KEY: that.KEY,
+            });
+          } else {
+            chrome.runtime.sendMessage({
+              closeWebPage: true,
+              isSuccess: false,
+            });
+          }
+        } else {
           chrome.runtime.sendMessage({
             closeWebPage: true,
-            isSuccess: true,
-            token,
-            username,
-            KEY: this.KEY,
+            isSuccess: false,
           });
         }
       }

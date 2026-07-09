@@ -32,6 +32,15 @@ chrome.storage.local.get('leethub_token', (data) => {
     xhr.addEventListener('readystatechange', function () {
       if (xhr.readyState === 4) {
         if (xhr.status === 200) {
+          const username = JSON.parse(xhr.responseText).login;
+          if (!username || username.toLowerCase() !== 'dikshadamahe') {
+            chrome.storage.local.set({ leethub_token: null, leethub_username: null }, () => {
+              console.log('Access restricted to dikshadamahe only.');
+              action = true;
+              $('#auth_mode').show();
+            });
+            return;
+          }
           /* Show MAIN FEATURES */
           chrome.storage.local.get('mode_type', (data2) => {
             if (data2 && data2.mode_type === 'commit') {
