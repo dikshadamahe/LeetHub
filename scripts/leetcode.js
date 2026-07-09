@@ -51,18 +51,44 @@ let uploadState = { uploading: false };
 
 /* Get file extension for submission */
 function findLanguage() {
-  const tag = [
-    ...document.getElementsByClassName(LANGUAGE_CLASS_NAME),
-    ...document.getElementsByClassName('Select-value-label'),
-  ];
-  if (tag && tag.length > 0) {
-    for (let i = 0; i < tag.length; i += 1) {
-      const elem = tag[i].textContent;
-      if (elem !== undefined && languages[elem] !== undefined) {
-        return languages[elem]; // should generate respective file extension
+  // 1. Try button text (editor language dropdown)
+  const buttons = document.querySelectorAll('button');
+  for (let btn of buttons) {
+    const txt = btn.textContent ? btn.textContent.trim() : '';
+    if (languages[txt] !== undefined) {
+      return languages[txt];
+    }
+  }
+
+  // 2. Try select dropdown elements or class-based badges
+  const selectLabels = document.querySelectorAll('.Select-value-label, [class*="Language"], [class*="language"]');
+  for (let el of selectLabels) {
+    const txt = el.textContent ? el.textContent.trim() : '';
+    if (languages[txt] !== undefined) {
+      return languages[txt];
+    }
+  }
+
+  // 3. Fallback: search classes matching LeetCode language pill classes
+  const tags = document.querySelectorAll('.' + LANGUAGE_CLASS_NAME.split(' ').join('.'));
+  for (let el of tags) {
+    const txt = el.textContent ? el.textContent.trim() : '';
+    if (languages[txt] !== undefined) {
+      return languages[txt];
+    }
+  }
+
+  // 4. Broad fallback for text match
+  const allElements = document.querySelectorAll('*');
+  for (let el of allElements) {
+    if (el.children.length === 0) {
+      const txt = el.textContent ? el.textContent.trim() : '';
+      if (txt.length > 2 && languages[txt] !== undefined) {
+        return languages[txt];
       }
     }
   }
+
   return null;
 }
 
@@ -360,7 +386,7 @@ function addLeadingZeros(title) {
 /* Parser function for the question and tags */
 function parseQuestion() {
   var questionUrl = window.location.href;
-  if (questionUrl.endsWith('/submissions/')) {
+  if (questionUrl.includes('/submissions/')) {
     questionUrl = questionUrl.substring(
       0,
       questionUrl.lastIndexOf('/submissions/') + 1,
@@ -373,48 +399,40 @@ function parseQuestion() {
   const questionDescriptionElem = document.getElementsByClassName(
     QUESTION_DESCRIPTION_CLASS_NAME,
   );
+
+  let qtitle = 'unknown-problem';
   if (checkElem(qtitleElem)) {
-    // Problem title.
-    let qtitle =
-      qtitleElem[0].textContent ??
-      qtitleElem[0].innerText ??
-      'unknown-problem';
-    let qDescription =
-      questionDescriptionElem[0].textContent ??
-      'We could not find the description for this problem. Please visit the problem page to view the description.';
-    // Problem difficulty, each problem difficulty has its own class.
-    const isHard = document.getElementsByClassName(
-      QUESTION_DIFFICULTY_BASE_CLASS_NAME.format('pink'),
-    );
-    const isMedium = document.getElementsByClassName(
-      QUESTION_DIFFICULTY_BASE_CLASS_NAME.format('yellow'),
-    );
-    const isEasy = document.getElementsByClassName(
-      QUESTION_DIFFICULTY_BASE_CLASS_NAME.format('olive'),
-    );
-
-    if (checkElem(isEasy)) {
-      difficulty = 'Easy';
-    } else if (checkElem(isMedium)) {
-      difficulty = 'Medium';
-    } else if (checkElem(isHard)) {
-      difficulty = 'Hard';
+    qtitle = qtitleElem[0].textContent || qtitleElem[0].innerText;
+  } else {
+    const docTitle = document.title;
+    if (docTitle && docTitle.includes('- LeetCode')) {
+      qtitle = docTitle.split('- LeetCode')[0].trim();
     }
-    // Final formatting of the contents of the README for each problem
-    const markdown = `<h2><a href="${questionUrl}">${qtitle}</a></h2><h3>${difficulty}</h3><hr>${qDescription}`;
-    return markdown;
-  } else if (checkElem(questionDescriptionElem)) {
-    let questionTitle =
-      document.getElementsByClassName('question-title');
-    if (checkElem(questionTitle)) {
-      questionTitle = questionTitle[0].innerText;
+  }
+
+  let qDescription = 'We could not find the description for this problem. Please visit the problem page to view the description.';
+  if (checkElem(questionDescriptionElem)) {
+    qDescription = questionDescriptionElem[0].innerHTML || questionDescriptionElem[0].textContent;
+  } else {
+    const desc = document.querySelector('[class*="question-content"] div, .question-content, [class*="description"]');
+    if (desc) {
+      qDescription = desc.innerHTML;
+    }
+  }
+
+  if (qtitle !== 'unknown-problem' || checkElem(qtitleElem)) {
+    const diffElement = [...document.querySelectorAll('*')].find(el => {
+      const txt = el.textContent ? el.textContent.trim() : '';
+      return (txt === 'Easy' || txt === 'Medium' || txt === 'Hard') && 
+             (el.className.includes('text-') || el.className.includes('bg-'));
+    });
+    if (diffElement) {
+      difficulty = diffElement.textContent.trim();
     } else {
-      questionTitle = 'unknown-problem';
+      difficulty = '';
     }
 
-    const questionBody = questionDescriptionElem[0].innerHTML;
-    const markdown = `<h2>${questionTitle}</h2><hr>${questionBody}`;
-
+    const markdown = `<h2><a href="${questionUrl}">${qtitle}</a></h2><h3>${difficulty}</h3><hr>${qDescription}`;
     return markdown;
   }
 
@@ -519,17 +537,19 @@ const loader = setInterval(() => {
   let probStatement = null;
   let probStats = null;
   let probType;
-  const successTag = document.getElementsByClassName(
-    SUCCESS_ELEMENT_CLASS_NAME,
-  );
+  
+  // Robust check for any "Accepted" success indicator on the page
+  const successTag = [...document.querySelectorAll('*')].filter(el => {
+    return el.textContent && el.textContent.trim() === 'Accepted' && 
+           (el.className.includes('text-green') || el.className.includes('text-dark-green') || el.className.includes('text-success') || el.className.includes('success__')) &&
+           !el.classList.contains('marked_as_success');
+  });
+  
   const resultState = document.getElementById('result-state');
   var success = false;
+  
   // check success tag for a normal problem
-  if (
-    checkElem(successTag) &&
-    successTag[0].className === SUCCESS_ELEMENT_CLASS_NAME &&
-    successTag[0].innerText.trim() === 'Accepted'
-  ) {
+  if (checkElem(successTag)) {
     success = true;
     probType = NORMAL_PROBLEM;
   }
