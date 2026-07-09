@@ -13,8 +13,8 @@ const localAuth = {
       'https://github.com/login/oauth/access_token';
     this.AUTHORIZATION_URL =
       'https://github.com/login/oauth/authorize';
-    this.CLIENT_ID = 'beb4f0aa19ab8faf5004';
-    this.CLIENT_SECRET = '843f835609c7ef02ef0f2f1645bc49514c0e65a6';
+    this.CLIENT_ID = 'Iv23liKkJky2o9ne6723';
+    this.CLIENT_SECRET = '4fdbbe92746ecbcf618a900a915a3249323bfbf4';
     this.REDIRECT_URL = 'https://github.com/'; // for example, https://github.com
     this.SCOPES = ['repo'];
   },
