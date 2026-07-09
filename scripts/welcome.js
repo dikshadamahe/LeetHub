@@ -36,8 +36,8 @@ const statusCode = (res, status, name) => {
 
     case 403:
       $('#success').hide();
-      $('#error').text(
-        `Error creating ${name} - Forbidden access to repository. Try again later!`,
+      $('#error').html(
+        `Error creating ${name} - Forbidden access to repository. <a id="reset_token" style="color: #f18500; cursor: pointer; text-decoration: underline;">Click here to reset authorization.</a>`,
       );
       $('#error').show();
       break;
@@ -115,7 +115,7 @@ const linkStatusCode = (status, name) => {
     case 403:
       $('#success').hide();
       $('#error').html(
-        `Error linking <a target="blank" href="${`https://github.com/${name}`}">${name}</a> to LeetHub. <br> Forbidden action. Please make sure you have the right access to this repository.`,
+        `Error linking <a target="blank" href="${`https://github.com/${name}`}">${name}</a> to LeetHub. <br> Forbidden action. Please make sure you have the right access to this repository. <br><a id="reset_token" style="color: #f18500; cursor: pointer; text-decoration: underline;">Click here to reset authorization.</a>`,
       );
       $('#error').show();
       break;
@@ -352,4 +352,10 @@ chrome.storage.local.get('mode_type', (data) => {
     document.getElementById('hook_mode').style.display = 'inherit';
     document.getElementById('commit_mode').style.display = 'none';
   }
+});
+
+$(document).on('click', '#reset_token', () => {
+  chrome.storage.local.clear(() => {
+    window.location.reload();
+  });
 });
